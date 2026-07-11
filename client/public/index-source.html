@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Work Time Manager</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1a6fc4;--primary-d:#145aa0;--primary-l:#e8f1fb;
+  --ok:#1a8f4a;--ok-bg:#e6f7ed;
+  --over:#c0392b;--over-bg:#fdecea;
+  --warn-bg:#fff8e1;--warn-bd:#f0c040;
+  --page-bg:#eef2f7;--card:#fff;--border:#d0dce8;
+  --text:#1a1a2e;--muted:#5a6a7a;
+  --radius:14px;--shadow:0 2px 14px rgba(0,0,0,.09);
+}
+body{font-family:'Segoe UI','Noto Sans JP','Noto Sans',Arial,sans-serif;background:var(--page-bg);color:var(--text);min-height:100vh;padding-bottom:60px}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1a6fc4 0%,#0d4f9a 100%);color:#fff;padding:24px 20px 18px;text-align:center;box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.header h1{font-size:clamp(1.1rem,4.5vw,1.6rem);font-weight:800;letter-spacing:.02em}
+.header .sub{font-size:.82rem;opacity:.82;margin-top:4px}
+
+/* LAYOUT */
+.wrap{max-width:960px;margin:0 auto;padding:0 12px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 16px;margin-top:16px}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.card-icon{width:28px;height:28px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.95rem;flex-shrink:0}
+.card-title{font-size:.95rem;font-weight:700;color:var(--primary)}
+
+/* TOP BAR */
+.top-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.lang-wrap{display:flex;align-items:center;gap:8px;flex:1;min-width:200px}
+.lang-label{font-size:.82rem;font-weight:600;color:var(--muted);white-space:nowrap}
+select#langSel{flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;background:#fff;color:var(--text);outline:none;cursor:pointer;transition:border-color .2s}
+select#langSel:focus{border-color:var(--primary)}
+.limit-wrap{display:flex;align-items:center;gap:8px}
+.limit-wrap label{font-size:.82rem;font-weight:600;color:var(--muted);white-space:nowrap}
+input#limitH{width:76px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:1rem;font-weight:700;text-align:center;color:var(--primary);outline:none;transition:border-color .2s}
+input#limitH:focus{border-color:var(--primary)}
+.limit-unit{font-size:.85rem;font-weight:600;color:var(--muted)}
+
+/* WORKPLACE TAGS */
+.wp-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.wp-bar .wp-list-label{font-size:.85rem;font-weight:700;color:var(--muted);flex:1}
+.btn-add-wp{padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s,box-shadow .2s;box-shadow:0 2px 8px rgba(26,111,196,.25)}
+.btn-add-wp:hover{background:var(--primary-d)}
+.wp-tags{display:flex;flex-wrap:wrap;gap:8px}
+.wp-tag{display:flex;align-items:center;gap:6px;background:var(--primary-l);border:1.5px solid var(--primary);border-radius:99px;padding:5px 12px 5px 10px;font-size:.85rem;font-weight:600;color:var(--primary-d)}
+.wp-tag input{border:none;background:transparent;font-size:.85rem;font-weight:600;color:var(--primary-d);outline:none;width:110px;min-width:60px}
+.wp-tag .del-wp{background:none;border:none;color:#c0392b;cursor:pointer;font-size:.95rem;line-height:1;padding:0 2px;opacity:.7;transition:opacity .2s}
+.wp-tag .del-wp:hover{opacity:1}
+.wp-color{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+/* SCHEDULE GRID */
+.schedule-outer{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.schedule-grid{min-width:600px;border-radius:12px;overflow:hidden;border:1.5px solid var(--border)}
+
+/* head */
+.sg-head{display:grid;background:var(--primary);color:#fff}
+.sg-corner{padding:10px 8px;font-size:.78rem;font-weight:700;text-align:center;border-right:1px solid rgba(255,255,255,.2)}
+.sg-day-head{padding:8px 6px;font-size:.82rem;font-weight:700;text-align:center;border-right:1px solid rgba(255,255,255,.15)}
+.sg-day-head:last-child{border-right:none}
+.sg-day-head .dn{display:block;font-size:.85rem}
+.sg-wp-total-head{border-left:2px solid rgba(255,255,255,.3);padding:10px 6px;font-size:.78rem;font-weight:700;text-align:center}
+.sat-head{color:#7dd3fc!important}
+.sun-head{color:#fca5a5!important}
+
+/* rows */
+.sg-row{display:grid;border-top:1px solid var(--border)}
+.sg-row:nth-child(even){background:#fafcff}
+.sg-row:nth-child(odd){background:#fff}
+.sg-label{padding:8px 6px;font-size:.78rem;font-weight:700;color:var(--muted);border-right:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;text-align:center;background:#f7fafd;min-width:56px}
+
+/* CELL */
+.sg-cell{border-right:1px solid var(--border);padding:4px 3px;display:flex;align-items:stretch;justify-content:center}
+.sg-cell:last-child{border-right:none}
+
+/* cell inner card */
+.cell-card{
+  width:100%;background:#fff;border:1.5px solid var(--border);border-radius:8px;
+  padding:5px 5px 4px;display:flex;flex-direction:column;gap:3px;
+  transition:border-color .2s,box-shadow .2s;cursor:pointer;
+  min-width:90px;
+}
+.cell-card:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,111,196,.1)}
+.cell-card.has-data{background:#f0f7ff;border-color:#93c5fd}
+.cell-card.partial{background:#fffbf0;border-color:#fbbf24}
+
+/* time row inside cell */
+.cell-row{display:flex;align-items:center;gap:3px}
+.cell-row label{font-size:.6rem;font-weight:700;color:var(--muted);white-space:nowrap;min-width:18px}
+.cell-row input[type=time]{
+  flex:1;border:1px solid var(--border);border-radius:5px;
+  font-size:.78rem;font-weight:600;color:var(--text);
+  padding:3px 3px;background:#fff;outline:none;
+  transition:border-color .2s;min-width:0;width:100%;
+}
+.cell-row input[type=time]:focus{border-color:var(--primary)}
+.cell-row input[type=number]{
+  flex:1;border:1px solid var(--border);border-radius:5px;
+  font-size:.78rem;font-weight:600;color:var(--text);
+  padding:3px 4px;background:#fff;outline:none;text-align:center;
+  transition:border-color .2s;min-width:0;width:100%;
+}
+.cell-row input[type=number]:focus{border-color:var(--primary)}
+.cell-row .unit{font-size:.6rem;color:var(--muted);white-space:nowrap}
+
+/* computed hours badge */
+.cell-hours{
+  text-align:center;font-size:.78rem;font-weight:800;
+  color:var(--primary-d);margin-top:2px;
+  background:var(--primary-l);border-radius:4px;padding:1px 4px;
+  min-height:16px;
+}
+.cell-hours.empty{color:var(--muted);background:#f0f4f8;font-weight:400;font-size:.68rem}
+.cell-hours.over-day{color:var(--over);background:#fdecea}
+
+/* day-color tints on cell */
+.day-0 .cell-card{background:#f8fbff}
+.day-1 .cell-card{background:#faf8ff}
+.day-2 .cell-card{background:#f8fff9}
+.day-3 .cell-card{background:#fffaf5}
+.day-4 .cell-card{background:#fff8fb}
+.day-5 .cell-card{background:#f5fbff}
+.day-6 .cell-card{background:#fff5f5}
+.day-0 .cell-card.has-data{background:#e0f0ff;border-color:#7eb8f5}
+.day-5 .cell-card.has-data{background:#ddf4ff;border-color:#7ecdf5}
+.day-6 .cell-card.has-data{background:#ffe8e8;border-color:#f5a0a0}
+
+/* totals */
+.sg-total-row{display:grid;background:#f0f4f8;border-top:2px solid var(--primary)}
+.sg-total-row .sg-label{background:#e8edf5;font-size:.75rem;color:var(--primary);font-weight:800}
+.sg-total-cell{padding:8px 4px;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.88rem;font-weight:800;color:var(--primary-d)}
+.sg-total-cell:last-child{border-right:none}
+.sg-total-cell.over{color:var(--over)}
+.sg-wp-total{padding:8px 5px;border-left:2px solid var(--primary);font-size:.88rem;font-weight:800;color:var(--primary-d);display:flex;align-items:center;justify-content:center;background:#f7fafd}
+.sg-wp-total.over{color:var(--over)}
+
+/* RESULT */
+.result-card{border-top:5px solid var(--primary);transition:border-color .3s}
+.result-card.ok{border-top-color:var(--ok)}
+.result-card.over{border-top-color:var(--over)}
+.result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+@media(min-width:480px){.result-grid{grid-template-columns:repeat(4,1fr)}}
+.r-item{background:#f7fafd;border-radius:10px;padding:12px 10px;text-align:center}
+.r-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.r-val{font-size:1.25rem;font-weight:800;color:var(--text)}
+.r-item.hi .r-val{color:var(--primary)}
+.r-item.ok .r-val{color:var(--ok)}
+.r-item.ov .r-val{color:var(--over)}
+.prog-wrap{margin:12px 0 10px}
+.prog-head{display:flex;justify-content:space-between;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:5px}
+.prog-bg{height:13px;background:#e8edf3;border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;background:var(--ok);transition:width .4s,background .3s}
+.prog-fill.over{background:var(--over)}
+.status-banner{border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;font-weight:700;transition:background .3s}
+.status-banner.ok{background:var(--ok-bg);color:var(--ok);border:1.5px solid #a7e8be}
+.status-banner.over{background:var(--over-bg);color:var(--over);border:1.5px solid #f5a9a3}
+.s-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.status-banner.ok .s-icon{background:#a7e8be}
+.status-banner.over .s-icon{background:#f5a9a3}
+.s-text .s-lbl{font-size:.75rem;opacity:.7}
+.s-text .s-val{font-size:1.1rem;font-weight:800}
+
+/* DAILY BREAKDOWN */
+.daily-card{border-top:4px solid var(--primary)}
+.daily-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:4px}
+@media(max-width:500px){.daily-grid{grid-template-columns:repeat(4,1fr)}}
+.day-card{
+  border-radius:10px;padding:10px 6px;text-align:center;
+  background:#f7fafd;border:1.5px solid var(--border);
+  transition:background .2s,border-color .2s;
+  position:relative;overflow:hidden;
+}
+.day-card.active{background:#e8f4ff;border-color:#93c5fd}
+.day-card.over-day{background:#fdecea;border-color:#f5a9a3}
+.day-card.sat{background:#f0f8ff;border-color:#bae6fd}
+.day-card.sun{background:#fff5f5;border-color:#fecaca}
+.day-card.sat.active{background:#dbeafe;border-color:#60a5fa}
+.day-card.sun.active{background:#fee2e2;border-color:#f87171}
+.day-name{
+  font-size:.72rem;font-weight:800;color:var(--muted);
+  margin-bottom:6px;display:block;
+}
+.day-card.sat .day-name{color:#0284c7}
+.day-card.sun .day-name{color:#dc2626}
+.day-hours{
+  font-size:1.05rem;font-weight:800;color:var(--primary-d);
+  line-height:1.1;
+}
+.day-card.over-day .day-hours{color:var(--over)}
+.day-card:not(.active) .day-hours{color:var(--muted);font-size:.85rem}
+.day-mini-bar{
+  height:4px;border-radius:99px;background:#e0e8f0;
+  margin-top:6px;overflow:hidden;
+}
+.day-mini-fill{
+  height:100%;border-radius:99px;background:var(--ok);
+  transition:width .4s,background .3s;
+}
+.day-mini-fill.over{background:var(--over)}
+.day-mini-fill.sat{background:#38bdf8}
+.day-mini-fill.sun{background:#f87171}
+.day-wp-list{
+  margin-top:5px;display:flex;flex-direction:column;gap:2px;
+}
+.day-wp-item{
+  font-size:.6rem;color:var(--muted);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+  display:flex;align-items:center;gap:3px;
+}
+.day-wp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* NOTE */
+.note{background:var(--warn-bg);border:1.5px solid var(--warn-bd);border-radius:var(--radius);padding:12px 14px;margin-top:16px;font-size:.8rem;color:#7a5500;line-height:1.6;display:flex;gap:8px;align-items:flex-start}
+
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:.75rem;color:var(--muted)}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:10px;height:10px;border-radius:3px}
+
+@media(max-width:640px){
+  .card{padding:14px 10px}
+  .cell-card{min-width:72px;padding:4px 3px}
+  .cell-row label{min-width:14px;font-size:.55rem}
+  .cell-row input[type=time]{font-size:.68rem}
+  .cell-row input[type=number]{font-size:.68rem}
+  .cell-hours{font-size:.7rem}
+  .sg-label{font-size:.7rem;min-width:46px}
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.sg-row{animation:fadeIn .18s ease}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="hTitle">Work Time Manager</h1>
+  <div class="sub" id="hSub">Weekly Work Schedule & 28-Hour Check</div>
+  <div class="sub" style="font-size:.7rem;opacity:.6;margin-top:2px">週28時間チェックツール</div>
+</div>
+
+<div class="wrap">
+
+<!-- SETTINGS -->
+<div class="card">
+  <div class="top-bar">
+    <div class="lang-wrap">
+      <span class="lang-label">🌐</span>
+      <select id="langSel" onchange="setLang(this.value)">
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="ja_easy">🇯🇵 やさしい日本語</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="vi">🇻🇳 Tiếng Việt</option>
+        <option value="ne">🇳🇵 नेपाली</option>
+        <option value="zh">🇨🇳 中文</option>
+        <option value="ko">🇰🇷 한국어</option>
+        <option value="tl">🇵🇭 Tagalog</option>
+        <option value="id">🇮🇩 Bahasa Indonesia</option>
+        <option value="my">🇲🇲 မြန်မာဘာသာ</option>
+        <option value="th">🇹🇭 ภาษาไทย</option>
+        <option value="si">🇱🇰 සිංහල</option>
+        <option value="bn">🇧🇩 বাংলা</option>
+        <option value="hi">🇮🇳 हिन्दी</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="pt">🇧🇷 Português</option>
+      </select>
+    </div>
+    <div class="limit-wrap">
+      <label for="limitH" id="lblLimit">制限時間</label>
+      <input type="number" id="limitH" value="28" min="1" max="168" step="0.5" oninput="renderGrid();calc()"/>
+      <span class="limit-unit" id="lblHUnit">時間</span>
+    </div>
+  </div>
+</div>
+
+<!-- WORKPLACES -->
+<div class="card">
+  <div class="wp-bar">
+    <span class="wp-list-label" id="lblWpTitle">勤務先</span>
+    <button class="btn-add-wp" id="btnAddWp" onclick="addWp()">＋ <span id="btnAddWpTxt">勤務先を追加</span></button>
+  </div>
+  <div class="wp-tags" id="wpTags"></div>
+</div>
+
+<!-- SCHEDULE GRID -->
+<div class="card" style="padding:18px 10px">
+  <div class="card-head">
+    <div class="card-icon">📅</div>
+    <span class="card-title" id="lblSchedTitle">週間スケジュール</span>
+  </div>
+  <!-- legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7eb8f5"></div><span id="lgStart">開始</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f5a07e"></div><span id="lgEnd">終了</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a0c4a0"></div><span id="lgBreak">休憩(分)</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#93c5fd"></div><span id="lgHours">実働時間</span></div>
+  </div>
+  <div style="margin-top:12px" class="schedule-outer">
+    <div id="schedGrid"></div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="card result-card" id="resultCard">
+  <div class="card-head">
+    <div class="card-icon">📊</div>
+    <span class="card-title" id="lblResultTitle">計算結果</span>
+  </div>
+  <div class="result-grid">
+    <div class="r-item hi">
+      <div class="r-label" id="lblTotal">週間合計</div>
+      <div class="r-val" id="valTotal">0.0</div>
+    </div>
+    <div class="r-item">
+      <div class="r-label" id="lblLimitR">制限時間</div>
+      <div class="r-val" id="valLimitR">28.0</div>
+    </div>
+    <div class="r-item ok" id="remainItem">
+      <div class="r-label" id="lblRemain">残り時間</div>
+      <div class="r-val" id="valRemain">28.0</div>
+    </div>
+    <div class="r-item" id="overItem">
+      <div class="r-label" id="lblOver">オーバー時間</div>
+      <div class="r-val" id="valOver">0.0</div>
+    </div>
+  </div>
+  <div class="prog-wrap">
+    <div class="prog-head"><span id="lblProg">使用率</span><span id="valPct">0%</span></div>
+    <div class="prog-bg"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  </div>
+  <div class="status-banner ok" id="statusBanner">
+    <div class="s-icon" id="sIcon">✅</div>
+    <div class="s-text">
+      <div class="s-lbl" id="lblStatus">状態</div>
+      <div class="s-val" id="valStatus">OK ✓</div>
+    </div>
+  </div>
+</div>
+
+<!-- DAILY BREAKDOWN -->
+<div class="card daily-card" id="dailyCard">
+  <div class="card-head">
+    <div class="card-icon">📆</div>
+    <span class="card-title" id="lblDailyTitle">日ごとの合計</span>
+  </div>
+  <div class="daily-grid" id="dailyGrid"></div>
+</div>
+
+<div class="note">
+  <span>⚠️</span>
+  <span id="noteText">このツールは目安です。在留資格や最新の制度は必ず公式情報で確認してください。</span>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── TRANSLATIONS ──────────────────────────────
+const T = {
+  ja:{
+    title:"Work Time Manager",sub:"週間勤務スケジュール & 28時間チェック",
+    limit:"制限時間",hours:"時間",wp_title:"勤務先",add_wp:"勤務先を追加",
+    sched_title:"週間スケジュール",result_title:"計算結果",
+    total:"週間合計",limit_r:"制限時間",remain:"残り時間",over_h:"オーバー時間",
+    usage:"使用率",status:"状態",ok:"OK ✓",over_status:h=>`${h}時間オーバー`,
+    days:["月","火","水","木","金","土","日"],
+    daily_title:"日ごとの合計",wp_total:"合計",day_total:"日計",wp_ph:"勤務先名",
+    lg_start:"開始",lg_end:"終了",lg_break:"休憩(分)",lg_hours:"実働時間",
+    lbl_start:"開始",lbl_end:"終了",lbl_break:"休憩",lbl_min:"分",
+    note:"このツールは目安です。在留資格や最新の制度は必ず公式情報で確認してください。"
+  },
+  ja_easy:{
+    title:"Work Time Manager",sub:"はたらく じかん を かくにん する ツール",
+    limit:"はたらける じかん",hours:"じかん",wp_title:"はたらく ばしょ",add_wp:"ばしょを ふやす",
+    sched_title:"1しゅうかんの スケジュール",result_title:"けいさん の けっか",
+    total:"ぜんぶの じかん",limit_r:"はたらける じかん",remain:"のこりの じかん",over_h:"オーバーした じかん",
+    usage:"つかった わりあい",status:"いまの じょうたい",ok:"だいじょうぶ ✓",over_status:h=>`${h}じかん オーバー`,
+    days:["月","火","水","木","金","土","日"],
+    daily_title:"ひごとの ごうけい",wp_total:"ごうけい",day_total:"にっけい",wp_ph:"ばしょの なまえ",
+    lg_start:"はじまり",lg_end:"おわり",lg_break:"きゅうけい(ふん)",lg_hours:"じっさいの じかん",
+    lbl_start:"はじまり",lbl_end:"おわり",lbl_break:"きゅうけい",lbl_min:"ふん",
+    note:"これは めやす です。ほんとうの ルールは やくしょ などで かくにん してください。"
+  },
+  en:{
+    title:"Work Time Manager",sub:"Weekly Work Schedule & 28-Hour Check",
+    limit:"Limit",hours:"hrs",wp_title:"Workplaces",add_wp:"Add Workplace",
+    sched_title:"Weekly Schedule",result_title:"Result",
+    total:"Total",limit_r:"Limit",remain:"Remaining",over_h:"Over Hours",
+    usage:"Usage",status:"Status",ok:"OK ✓",over_status:h=>`${h} hrs over`,
+    days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+    daily_title:"Daily Total",wp_total:"Total",day_total:"Daily",wp_ph:"Workplace name",
+    lg_start:"Start",lg_end:"End",lg_break:"Break(min)",lg_hours:"Work hrs",
+    lbl_start:"Start",lbl_end:"End",lbl_break:"Break",lbl_min:"min",
+    note:"This tool is for reference only. Please check official information regarding visa status and latest regulations."
+  },
+  vi:{
+    title:"Work Time Manager",sub:"Lịch làm việc & kiểm tra 28 giờ",
+    limit:"Giới hạn",hours:"giờ",wp_title:"Nơi làm việc",add_wp:"Thêm nơi làm việc",
+    sched_title:"Lịch tuần",result_title:"Kết quả",
+    total:"Tổng",limit_r:"Giới hạn",remain:"Còn lại",over_h:"Vượt quá",
+    usage:"Tỷ lệ",status:"Trạng thái",ok:"OK ✓",over_status:h=>`Vượt ${h} giờ`,
+    days:["T2","T3","T4","T5","T6","T7","CN"],
+    daily_title:"Tổng theo ngày",wp_total:"Tổng",day_total:"Ngày",wp_ph:"Tên nơi làm việc",
+    lg_start:"Bắt đầu",lg_end:"Kết thúc",lg_break:"Nghỉ(ph)",lg_hours:"Giờ làm",
+    lbl_start:"Bắt đầu",lbl_end:"Kết thúc",lbl_break:"Nghỉ",lbl_min:"ph",
+    note:"Công cụ này chỉ mang tính tham khảo. Vui lòng kiểm tra thông tin chính thức về tình trạng visa và quy định mới nhất."
+  },
+  ne:{
+    title:"Work Time Manager",sub:"साप्ताहिक कार्य तालिका र जाँच",
+    limit:"सीमा",hours:"घण्टा",wp_title:"कार्यस्थल",add_wp:"कार्यस्थल थप्नुहोस्",
+    sched_title:"साप्ताहिक तालिका",result_title:"नतिजा",
+    total:"कुल",limit_r:"सीमा",remain:"बाँकी",over_h:"बढी",
+    usage:"उपयोग",status:"स्थिति",ok:"ठिक ✓",over_status:h=>`${h} घण्टा बढी`,
+    days:["सोम","मंगल","बुध","बिही","शुक्र","शनि","आइत"],
+    daily_title:"दैनिक कुल",wp_total:"जम्मा",day_total:"दैनिक",wp_ph:"कार्यस्थलको नाम",
+    lg_start:"सुरु",lg_end:"अन्त्य",lg_break:"बिराम(मि)",lg_hours:"काम घण्टा",
+    lbl_start:"सुरु",lbl_end:"अन्त्य",lbl_break:"बिराम",lbl_min:"मि",
+    note:"यो उपकरण सन्दर्भको लागि मात्र हो। कृपया भिसा स्थिति र नवीनतम नियमहरूको बारेमा आधिकारिक जानकारी जाँच गर्नुहोस्।"
+  },
+  zh:{
+    title:"Work Time Manager",sub:"每周工作日程 & 28小时检查",
+    limit:"限制",hours:"小时",wp_title:"工作地点",add_wp:"添加工作地点",
+    sched_title:"每周日程",result_title:"计算结果",
+    total:"总计",limit_r:"限制",remain:"剩余",over_h:"超出",
+    usage:"使用率",status:"状态",ok:"正常 ✓",over_status:h=>`超出 ${h} 小时`,
+    days:["周一","周二","周三","周四","周五","周六","周日"],
+    daily_title:"每日合计",wp_total:"合计",day_total:"日计",wp_ph:"工作地点名称",
+    lg_start:"开始",lg_end:"结束",lg_break:"休息(分)",lg_hours:"工时",
+    lbl_start:"开始",lbl_end:"结束",lbl_break:"休息",lbl_min:"分",
+    note:"此工具仅供参考。请务必通过官方信息确认在留资格及最新制度。"
+  },
+  ko:{
+    title:"Work Time Manager",sub:"주간 근무 일정 & 28시간 확인",
+    limit:"제한",hours:"시간",wp_title:"근무지",add_wp:"근무지 추가",
+    sched_title:"주간 스케줄",result_title:"계산 결과",
+    total:"합계",limit_r:"제한",remain:"남은",over_h:"초과",
+    usage:"사용률",status:"상태",ok:"정상 ✓",over_status:h=>`${h}시간 초과`,
+    days:["월","화","수","목","금","토","일"],
+    daily_title:"일별 합계",wp_total:"합계",day_total:"일계",wp_ph:"근무지 이름",
+    lg_start:"시작",lg_end:"종료",lg_break:"휴식(분)",lg_hours:"근무시간",
+    lbl_start:"시작",lbl_end:"종료",lbl_break:"휴식",lbl_min:"분",
+    note:"이 도구는 참고용입니다. 체류 자격 및 최신 제도는 반드시 공식 정보를 확인하십시오."
+  },
+  tl:{
+    title:"Work Time Manager",sub:"Lingguhang Iskedyul & 28-Oras na Tseke",
+    limit:"Limitasyon",hours:"oras",wp_title:"Trabaho",add_wp:"Magdagdag ng Trabaho",
+    sched_title:"Lingguhang Iskedyul",result_title:"Resulta",
+    total:"Kabuuan",limit_r:"Limitasyon",remain:"Natitira",over_h:"Sobra",
+    usage:"Paggamit",status:"Katayuan",ok:"OK ✓",over_status:h=>`${h} oras na sobra`,
+    days:["Lun","Mar","Miy","Huw","Biy","Sab","Lin"],
+    daily_title:"Kabuuan sa Araw",wp_total:"Kabuuan",day_total:"Araw",wp_ph:"Pangalan ng trabaho",
+    lg_start:"Simula",lg_end:"Katapusan",lg_break:"Pahinga(min)",lg_hours:"Oras ng trabaho",
+    lbl_start:"Simula",lbl_end:"Katapusan",lbl_break:"Pahinga",lbl_min:"min",
+    note:"Ang tool na ito ay para sa sanggunian lamang. Mangyaring suriin ang opisyal na impormasyon tungkol sa katayuan ng visa at pinakabagong mga regulasyon."
+  },
+  id:{
+    title:"Work Time Manager",sub:"Jadwal Kerja Mingguan & Cek 28 Jam",
+    limit:"Batas",hours:"jam",wp_title:"Tempat Kerja",add_wp:"Tambah Tempat Kerja",
+    sched_title:"Jadwal Mingguan",result_title:"Hasil",
+    total:"Total",limit_r:"Batas",remain:"Sisa",over_h:"Kelebihan",
+    usage:"Penggunaan",status:"Status",ok:"OK ✓",over_status:h=>`Lebih ${h} jam`,
+    days:["Sen","Sel","Rab","Kam","Jum","Sab","Min"],
+    daily_title:"Total Harian",wp_total:"Total",day_total:"Harian",wp_ph:"Nama tempat kerja",
+    lg_start:"Mulai",lg_end:"Selesai",lg_break:"Istirahat(mnt)",lg_hours:"Jam kerja",
+    lbl_start:"Mulai",lbl_end:"Selesai",lbl_break:"Istirahat",lbl_min:"mnt",
+    note:"Alat ini hanya untuk referensi. Harap periksa informasi resmi mengenai status visa dan peraturan terbaru."
+  },
+  my:{
+    title:"Work Time Manager",sub:"အပတ်စဉ် အလုပ်ချိန်ဇယား",
+    limit:"ကန့်သတ်",hours:"နာရီ",wp_title:"အလုပ်နေရာ",add_wp:"အလုပ်နေရာ ထည့်ရန်",
+    sched_title:"အပတ်စဉ် ဇယား",result_title:"ရလဒ်",
+    total:"စုစုပေါင်း",limit_r:"ကန့်သတ်",remain:"ကျန်ရှိ",over_h:"ပိုသော",
+    usage:"အသုံးပြုမှု",status:"အခြေအနေ",ok:"အိုကေ ✓",over_status:h=>`${h} နာရီ ပိုသည်`,
+    days:["တနင်","အင်","ဗုဒ်","ကြာ","သော","စနေ","တနင်ဂ"],
+    daily_title:"နေ့စဉ် စုစုပေါင်း",wp_total:"စုစုပေါင်း",day_total:"နေ့စဉ်",wp_ph:"အလုပ်နေရာ အမည်",
+    lg_start:"စတင်",lg_end:"ပြီးဆုံး",lg_break:"နားချိန်(မိ)",lg_hours:"အလုပ်ချိန်",
+    lbl_start:"စတင်",lbl_end:"ပြီး",lbl_break:"နား",lbl_min:"မိ",
+    note:"ဤကိရိယာသည် ရည်ညွှန်းရန်အတွက်သာ ဖြစ်သည်။ ဗီဇာအခြေအနေနှင့် နောက်ဆုံးပေါ် စည်းမျဉ်းများကို တရားဝင်အချက်အလက်များမှ စစ်ဆေးပါ။"
+  },
+  th:{
+    title:"Work Time Manager",sub:"ตารางงานรายสัปดาห์ & ตรวจสอบ 28 ชั่วโมง",
+    limit:"จำกัด",hours:"ชม.",wp_title:"สถานที่ทำงาน",add_wp:"เพิ่มสถานที่ทำงาน",
+    sched_title:"ตารางรายสัปดาห์",result_title:"ผลลัพธ์",
+    total:"รวม",limit_r:"จำกัด",remain:"เหลือ",over_h:"เกิน",
+    usage:"อัตราการใช้",status:"สถานะ",ok:"ปกติ ✓",over_status:h=>`เกิน ${h} ชม.`,
+    days:["จ.","อ.","พ.","พฤ.","ศ.","ส.","อา."],
+    daily_title:"รวมรายวัน",wp_total:"รวม",day_total:"รายวัน",wp_ph:"ชื่อสถานที่ทำงาน",
+    lg_start:"เริ่ม",lg_end:"สิ้นสุด",lg_break:"พัก(นาที)",lg_hours:"ชั่วโมงทำงาน",
+    lbl_start:"เริ่ม",lbl_end:"สิ้น",lbl_break:"พัก",lbl_min:"นาที",
+    note:"เครื่องมือนี้มีไว้เพื่อใช้อ้างอิงเท่านั้น โปรดตรวจสอบข้อมูลอย่างเป็นทางการเกี่ยวกับสถานะวีซ่าและกฎระเบียบล่าสุด"
+  },
+  si:{
+    title:"Work Time Manager",sub:"සතිපතා කාර්යසටහන & පරීක්ෂාව",
+    limit:"සීමාව",hours:"පැය",wp_title:"සේවා ස්ථාන",add_wp:"සේවා ස්ථානයක් එක් කරන්න",
+    sched_title:"සතිපතා කාර්යසටහන",result_title:"ප්‍රතිඵලය",
+    total:"මුළු",limit_r:"සීමාව",remain:"ඉතිරි",over_h:"වැඩි",
+    usage:"භාවිත",status:"තත්වය",ok:"හරි ✓",over_status:h=>`${h} පැය වැඩි`,
+    days:["සඳු","අඟ","බදා","බ්‍රහ","සිකු","සෙන","ඉරි"],
+    daily_title:"දෛනික මුළු",wp_total:"මුළු",day_total:"දෛනික",wp_ph:"සේවා ස්ථානයේ නම",
+    lg_start:"ආරම්භ",lg_end:"අවසන්",lg_break:"විවේකය(මි)",lg_hours:"වැඩ පැය",
+    lbl_start:"ආරම්භ",lbl_end:"අවසන්",lbl_break:"විවේකය",lbl_min:"මි",
+    note:"මෙම මෙවලම යොමු කිරීම සඳහා පමණි. වීසා තත්වය සහ නවතම රෙගුලාසි පිළිබඳව නිල තොරතුරු පරීක්ෂා කරන්න."
+  },
+  bn:{
+    title:"Work Time Manager",sub:"সাপ্তাহিক কাজের সময়সূচি ও চেক",
+    limit:"সীমা",hours:"ঘণ্টা",wp_title:"কর্মস্থল",add_wp:"কর্মস্থল যোগ করুন",
+    sched_title:"সাপ্তাহিক সময়সূচি",result_title:"ফলাফল",
+    total:"মোট",limit_r:"সীমা",remain:"বাকি",over_h:"অতিরিক্ত",
+    usage:"ব্যবহার",status:"অবস্থা",ok:"ঠিক আছে ✓",over_status:h=>`${h} ঘণ্টা বেশি`,
+    days:["সোম","মঙ্গল","বুধ","বৃহ","শুক্র","শনি","রবি"],
+    daily_title:"দৈনিক মোট",wp_total:"মোট",day_total:"দৈনিক",wp_ph:"কর্মস্থলের নাম",
+    lg_start:"শুরু",lg_end:"শেষ",lg_break:"বিরতি(মি)",lg_hours:"কাজের সময়",
+    lbl_start:"শুরু",lbl_end:"শেষ",lbl_break:"বিরতি",lbl_min:"মি",
+    note:"এই টুলটি শুধুমাত্র রেফারেন্সের জন্য। ভিসা স্ট্যাটাস এবং সর্বশেষ নিয়মকানুন সম্পর্কে অফিসিয়াল তথ্য চেক করুন।"
+  },
+  hi:{
+    title:"Work Time Manager",sub:"साप्ताहिक कार्य अनुसूची और जाँच",
+    limit:"सीमा",hours:"घंटे",wp_title:"कार्यस्थल",add_wp:"कार्यस्थल जोड़ें",
+    sched_title:"साप्ताहिक अनुसूची",result_title:"परिणाम",
+    total:"कुल",limit_r:"सीमा",remain:"बचे",over_h:"अतिरिक्त",
+    usage:"उपयोग",status:"स्थिति",ok:"ठीक है ✓",over_status:h=>`${h} घंटे अधिक`,
+    days:["सोम","मंगल","बुध","गुरु","शुक्र","शनि","रवि"],
+    daily_title:"दैनिक कुल",wp_total:"कुल",day_total:"दैनिक",wp_ph:"कार्यस्थल का नाम",
+    lg_start:"शुरू",lg_end:"खत्म",lg_break:"विराम(मि)",lg_hours:"काम के घंटे",
+    lbl_start:"शुरू",lbl_end:"खत्म",lbl_break:"विराम",lbl_min:"मि",
+    note:"यह टूल केवल संदर्भ के लिए है। कृपया वीज़ा स्थिति और नवीनतम नियमों के बारे में आधिकारिक जानकारी की जांच करें।"
+  },
+  es:{
+    title:"Work Time Manager",sub:"Horario Semanal & Control de 28 Horas",
+    limit:"Límite",hours:"horas",wp_title:"Lugares de Trabajo",add_wp:"Añadir Lugar",
+    sched_title:"Horario Semanal",result_title:"Resultado",
+    total:"Total",limit_r:"Límite",remain:"Restantes",over_h:"Excedidas",
+    usage:"Uso",status:"Estado",ok:"OK ✓",over_status:h=>`${h} horas de exceso`,
+    days:["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"],
+    daily_title:"Total Diario",wp_total:"Total",day_total:"Diario",wp_ph:"Nombre del lugar",
+    lg_start:"Inicio",lg_end:"Fin",lg_break:"Descanso(min)",lg_hours:"Horas trabajadas",
+    lbl_start:"Inicio",lbl_end:"Fin",lbl_break:"Descanso",lbl_min:"min",
+    note:"Esta herramienta es solo de referencia. Por favor, consulte la información oficial sobre el estado de su visa y las últimas regulaciones."
+  },
+  pt:{
+    title:"Work Time Manager",sub:"Agenda Semanal & Verificação de 28 Horas",
+    limit:"Limite",hours:"horas",wp_title:"Locais de Trabalho",add_wp:"Adicionar Local",
+    sched_title:"Agenda Semanal",result_title:"Resultado",
+    total:"Total",limit_r:"Limite",remain:"Restantes",over_h:"Excedidas",
+    usage:"Uso",status:"Status",ok:"OK ✓",over_status:h=>`${h} horas a mais`,
+    days:["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"],
+    daily_title:"Total Diário",wp_total:"Total",day_total:"Diário",wp_ph:"Nome do local",
+    lg_start:"Início",lg_end:"Fim",lg_break:"Pausa(min)",lg_hours:"Horas trabalhadas",
+    lbl_start:"Início",lbl_end:"Fim",lbl_break:"Pausa",lbl_min:"min",
+    note:"Esta ferramenta é apenas para referência. Por favor, verifique as informações oficiais sobre o status do seu visto e as regulamentações mais recentes."
+  }
+};
+
+// ── COLORS ──
+const WP_COLORS = ["#1a6fc4","#e05c5c","#1a8f4a","#e07c1a","#7c3aed","#0891b2","#be185d","#15803d","#b45309","#4338ca"];
+
+// ── STATE ──
+let lang = 'ja';
+let wpList = [];
+let wpNextId = 1;
+// data[wpId][dayIdx] = {start:'09:00', end:'14:00', brk:0}
+let data = {};
+
+// ── INIT ──
+function init(){
+  addWp("コンビニA");
+  addWp("レストランB");
+}
+
+// ── LANG ──
+function setLang(l){
+  lang = l;
+  const t = T[l];
+  document.getElementById('hTitle').textContent = t.title;
+  document.getElementById('hSub').textContent = t.sub;
+  document.getElementById('lblLimit').textContent = t.limit;
+  document.getElementById('lblHUnit').textContent = t.hours;
+  document.getElementById('lblWpTitle').textContent = t.wp_title;
+  document.getElementById('btnAddWpTxt').textContent = t.add_wp;
+  document.getElementById('lblSchedTitle').textContent = t.sched_title;
+  document.getElementById('lblResultTitle').textContent = t.result_title;
+  document.getElementById('lblTotal').textContent = t.total;
+  document.getElementById('lblLimitR').textContent = t.limit_r;
+  document.getElementById('lblRemain').textContent = t.remain;
+  document.getElementById('lblOver').textContent = t.over_h;
+  document.getElementById('lblProg').textContent = t.usage;
+  document.getElementById('lblStatus').textContent = t.status;
+  document.getElementById('noteText').textContent = t.note;
+  document.getElementById('lgStart').textContent = t.lg_start;
+  document.getElementById('lgEnd').textContent = t.lg_end;
+  document.getElementById('lgBreak').textContent = t.lg_break;
+  document.getElementById('lgHours').textContent = t.lg_hours;
+  document.getElementById('lblDailyTitle').textContent = t.daily_title;
+  document.title = t.title;
+  document.querySelectorAll('.wp-name-inp').forEach(i=>i.placeholder=t.wp_ph);
+  renderGrid(); calc();
+}
+
+// ── WORKPLACE ──
+function addWp(defaultName){
+  const t = T[lang];
+  const id = wpNextId++;
+  const color = WP_COLORS[(wpList.length)%WP_COLORS.length];
+  wpList.push({id, name:defaultName||'', color});
+  data[id] = Array.from({length:7},()=>({start:'',end:'',brk:0}));
+  const tag = document.createElement('div');
+  tag.className='wp-tag'; tag.id=`wptag-${id}`;
+  tag.innerHTML=`<div class="wp-color" style="background:${color}"></div>
+    <input class="wp-name-inp" type="text" value="${defaultName||''}" placeholder="${t.wp_ph}" oninput="renameWp(${id},this.value)" maxlength="20"/>
+    <button class="del-wp" onclick="removeWp(${id})" title="削除">✕</button>`;
+  document.getElementById('wpTags').appendChild(tag);
+  renderGrid(); calc();
+}
+function renameWp(id,name){
+  const wp=wpList.find(w=>w.id===id); if(wp){wp.name=name; renderGrid();}
+}
+function removeWp(id){
+  wpList=wpList.filter(w=>w.id!==id); delete data[id];
+  const t=document.getElementById(`wptag-${id}`); if(t)t.remove();
+  renderGrid(); calc();
+}
+
+// ── COMPUTE HOURS ──
+function computeHours(start, end, brkMin){
+  if(!start||!end) return 0;
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  let mins = (eh*60+em)-(sh*60+sm);
+  if(mins<=0) mins+=24*60; // overnight
+  mins -= (parseFloat(brkMin)||0);
+  return Math.max(0, mins/60);
+}
+
+// ── GRID RENDER ──
+function renderGrid(){
+  const t = T[lang];
+  const limit = parseFloat(document.getElementById('limitH').value)||28;
+  const numWp = wpList.length;
+  // col widths: label + 7 days + total
+  const cols = `56px repeat(7,1fr) 52px`;
+  let html = `<div class="schedule-grid">`;
+
+  // HEAD
+  html+=`<div class="sg-head" style="grid-template-columns:${cols}">`;
+  html+=`<div class="sg-corner">${t.wp_title}</div>`;
+  for(let d=0;d<7;d++){
+    const cls=d===5?'sat-head':d===6?'sun-head':'';
+    html+=`<div class="sg-day-head ${cls}"><span class="dn">${t.days[d]}</span></div>`;
+  }
+  html+=`<div class="sg-wp-total-head">${t.wp_total}</div>`;
+  html+=`</div>`;
+
+  // WP ROWS
+  if(numWp===0){
+    html+=`<div class="sg-row" style="grid-template-columns:${cols}">
+      <div class="sg-label" style="grid-column:1/-1;color:var(--muted);padding:18px;text-align:center;font-size:.85rem">＋ ${t.add_wp}</div>
+    </div>`;
+  } else {
+    wpList.forEach(wp=>{
+      let wpTotal=0;
+      html+=`<div class="sg-row" style="grid-template-columns:${cols}">`;
+      html+=`<div class="sg-label" style="border-left:4px solid ${wp.color}">
+        <span style="color:${wp.color};font-size:.72rem;font-weight:700;word-break:break-all;text-align:center">${esc(wp.name||'?')}</span>
+      </div>`;
+      for(let d=0;d<7;d++){
+        const cell=data[wp.id]?data[wp.id][d]:{start:'',end:'',brk:0};
+        const hrs=computeHours(cell.start,cell.end,cell.brk);
+        wpTotal+=hrs;
+        const hasData=cell.start&&cell.end;
+        const partialData=!hasData&&(cell.start||cell.end);
+        const hrsLabel=hasData?(fmt(hrs)+' '+t.hours):(partialData?'…':'—');
+        const hrsCls=hasData?(hrs>8?'over-day':''):'empty';
+        html+=`<div class="sg-cell day-${d}">
+          <div class="cell-card${hasData?' has-data':partialData?' partial':''}" id="cc-${wp.id}-${d}">
+            <div class="cell-row">
+              <label>${t.lbl_start}</label>
+              <input type="time" value="${cell.start||''}"
+                onchange="setCell(${wp.id},${d},'start',this.value)"
+                style="border-color:#93c5fd"/>
+            </div>
+            <div class="cell-row">
+              <label>${t.lbl_end}</label>
+              <input type="time" value="${cell.end||''}"
+                onchange="setCell(${wp.id},${d},'end',this.value)"
+                style="border-color:#fca5a5"/>
+            </div>
+            <div class="cell-row">
+              <label>${t.lbl_break}</label>
+              <input type="number" min="0" max="480" step="5" value="${cell.brk||''}" placeholder="0"
+                oninput="setCell(${wp.id},${d},'brk',this.value)"
+                style="border-color:#86efac"/>
+              <span class="unit">${t.lbl_min}</span>
+            </div>
+            <div class="cell-hours ${hrsCls}">${hrsLabel}</div>
+          </div>
+        </div>`;
+      }
+      html+=`<div class="sg-wp-total${wpTotal>0&&wpTotal>limit?' over':''}">${wpTotal>0?fmt(wpTotal)+' '+t.hours:'—'}</div>`;
+      html+=`</div>`;
+    });
+  }
+
+  // DAY TOTAL ROW
+  html+=`<div class="sg-total-row" style="grid-template-columns:${cols}">`;
+  html+=`<div class="sg-label" style="font-size:.72rem;color:var(--primary);font-weight:800">${t.day_total}</div>`;
+  let grand=0;
+  for(let d=0;d<7;d++){
+    let daySum=0;
+    wpList.forEach(wp=>{ const c=data[wp.id]?.[d]; if(c&&c.start&&c.end) daySum+=computeHours(c.start,c.end,c.brk||0); });
+    grand+=daySum;
+    html+=`<div class="sg-total-cell day-${d}${daySum>0&&daySum>limit?' over':''}">${daySum>0?fmt(daySum)+'h':'—'}</div>`;
+  }
+  html+=`<div class="sg-wp-total${grand>limit?' over':''}" style="font-size:.88rem">${grand>0?fmt(grand):'—'}</div>`;
+  html+=`</div>`;
+
+  html+=`</div>`;
+  document.getElementById('schedGrid').innerHTML=html;
+}
+
+// ── SET CELL DATA ──
+function setCell(wpId,dayIdx,field,value){
+  if(!data[wpId]) data[wpId]=Array.from({length:7},()=>({start:'',end:'',brk:0}));
+  if(field==='brk') data[wpId][dayIdx].brk=parseFloat(value)||0;
+  else data[wpId][dayIdx][field]=value;
+  renderGrid(); calc();
+}
+
+// ── CALC ──
+function calc(){
+  const t=T[lang];
+  const limit=parseFloat(document.getElementById('limitH').value)||28;
+  let total=0;
+  // per-day sums
+  const daySums=Array(7).fill(0);
+  wpList.forEach(wp=>{
+    for(let d=0;d<7;d++){
+      const c=data[wp.id]?.[d];
+      if(c&&c.start&&c.end){
+        const h=computeHours(c.start,c.end,c.brk||0);
+        daySums[d]+=h;
+        total+=h;
+      }
+    }
+  });
+  const remaining=Math.max(0,limit-total);
+  const over=Math.max(0,total-limit);
+  const pct=Math.min(100,(total/limit)*100);
+  const isOver=total>limit;
+
+  document.getElementById('valTotal').textContent=fmt(total)+' '+t.hours;
+  document.getElementById('valLimitR').textContent=fmt(limit)+' '+t.hours;
+  document.getElementById('valRemain').textContent=fmt(remaining)+' '+t.hours;
+  document.getElementById('valOver').textContent=fmt(over)+' '+t.hours;
+  document.getElementById('valPct').textContent=Math.round(pct)+'%';
+
+  const fill=document.getElementById('progFill');
+  fill.style.width=pct+'%';
+  fill.classList.toggle('over',isOver);
+
+  const rc=document.getElementById('resultCard');
+  rc.classList.toggle('ok',!isOver); rc.classList.toggle('over',isOver);
+  const ri=document.getElementById('remainItem');
+  ri.classList.toggle('ok',!isOver); ri.classList.toggle('ov',isOver);
+  document.getElementById('overItem').classList.toggle('ov',isOver);
+
+  const banner=document.getElementById('statusBanner');
+  const icon=document.getElementById('sIcon');
+  const val=document.getElementById('valStatus');
+  if(isOver){
+    banner.className='status-banner over'; icon.textContent='⚠️';
+    val.textContent=t.over_status(fmt(over));
+  } else {
+    banner.className='status-banner ok'; icon.textContent='✅';
+    val.textContent=t.ok;
+  }
+
+  // ── DAILY BREAKDOWN CARDS ──
+  const maxDay=Math.max(...daySums,0.01);
+  let dgHtml='';
+  for(let d=0;d<7;d++){
+    const h=daySums[d];
+    const hasWork=h>0;
+    const isSat=d===5, isSun=d===6;
+    const isOverDay=h>8; // highlight if single day >8h
+    const barPct=Math.min(100,(h/maxDay)*100);
+    const barCls=isOverDay?'over':(isSat?'sat':isSun?'sun':'');
+    let cls='day-card';
+    if(hasWork) cls+=isOverDay?' over-day':(isSat?' sat active':isSun?' sun active':' active');
+    else cls+=isSat?' sat':isSun?' sun':'';
+    // wp breakdown for this day
+    let wpItems='';
+    if(hasWork){
+      wpList.forEach(wp=>{
+        const c=data[wp.id]?.[d];
+        if(c&&c.start&&c.end){
+          const wh=computeHours(c.start,c.end,c.brk||0);
+          if(wh>0){
+            const name=esc(wp.name||'?');
+            wpItems+=`<div class="day-wp-item"><div class="day-wp-dot" style="background:${wp.color}"></div>${name}: ${fmt(wh)}${t.hours}</div>`;
+          }
+        }
+      });
+    }
+    dgHtml+=`
+    <div class="${cls}">
+      <span class="day-name">${t.days[d]}</span>
+      <div class="day-hours">${hasWork?fmt(h)+t.hours:'—'}</div>
+      <div class="day-mini-bar"><div class="day-mini-fill ${barCls}" style="width:${hasWork?barPct:0}%"></div></div>
+      ${wpItems?`<div class="day-wp-list">${wpItems}</div>`:''}
+    </div>`;
+  }
+  document.getElementById('dailyGrid').innerHTML=dgHtml;
+}
+
+// ── UTILS ──
+function fmt(n){
+  if(n===Math.floor(n)) return n.toFixed(1);
+  return parseFloat(n.toFixed(2)).toString();
+}
+function esc(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+Work Time Manager — GitHub Pages ready package
+
+Changes included:
+- Claude-reviewed WorkTimeManager.tsx
+- WorkTimeManager.css
+- Guide.tsx and /guide route
+- Vite base path set to /work-time-manager/
+- GitHub Actions automatic build/deploy workflow
+- SPA 404 fallback generated during deployment
+
+After these files are committed and pushed to main:
+1. GitHub repository Settings > Pages
+2. Source: GitHub Actions
+3. Open Actions and wait for the deployment to finish
+4. Site URL: https://nextrbusiness-lab.github.io/work-time-manager/

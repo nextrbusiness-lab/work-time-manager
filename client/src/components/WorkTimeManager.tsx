@@ -2,6 +2,12 @@ import { useRef, useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import './WorkTimeManager.css';
 
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
 // ── TRANSLATIONS ──────────────────────────────────────────────────────────────
 const T: Record<string, any> = {
   ja:{
@@ -702,6 +708,74 @@ function PasswordGate({ children }: { children: React.ReactNode }) {
 
 function WorkTimeManagerInner() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isIosInstallGuide, setIsIosInstallGuide] = useState(false);
+
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+    if (isStandalone) return;
+
+    const dismissed = localStorage.getItem('wtm_install_banner_dismissed') === '1';
+    if (dismissed) return;
+
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIos = /iphone|ipad|ipod/.test(userAgent);
+    setIsIosInstallGuide(isIos);
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+      setShowInstallBanner(true);
+    };
+
+    const handleAppInstalled = () => {
+      setShowInstallBanner(false);
+      setInstallPrompt(null);
+      localStorage.setItem('wtm_install_banner_dismissed', '1');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // iPhone/iPad cannot open the native install dialog from a web button,
+    // so show a short manual guide instead.
+    if (isIos) setShowInstallBanner(true);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const closeInstallBanner = () => {
+    localStorage.setItem('wtm_install_banner_dismissed', '1');
+    setShowInstallBanner(false);
+  };
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        localStorage.setItem('wtm_install_banner_dismissed', '1');
+        setShowInstallBanner(false);
+      }
+      setInstallPrompt(null);
+      return;
+    }
+
+    if (isIosInstallGuide) {
+      window.alert('画面下の共有ボタンを押し、「ホーム画面に追加」を選んでください。');
+      return;
+    }
+
+    window.alert('ブラウザ右上のメニュー（︙）から「ホーム画面に追加」または「アプリをインストール」を選んでください。');
+  };
+
   const stateRef = useRef<{
     lang: string;
     wpList: Array<{id:number;name:string;color:string}>;
@@ -1953,6 +2027,101 @@ function WorkTimeManagerInner() {
         <div className="sub" style={{fontSize:'.7rem',opacity:.6,marginTop:'2px'}}>週間勤務スケジュール &amp; 週間時間制限チェックツール</div>
         <Link href="/guide" className="guide-link-btn" id="btnGuide">📖 使い方</Link>
       </div>
+
+
+      {showInstallBanner && (
+        <div
+          role="dialog"
+          aria-label="ホーム画面に追加"
+          style={{
+            position: 'fixed',
+            left: '12px',
+            right: '12px',
+            bottom: '16px',
+            zIndex: 9999,
+            maxWidth: '620px',
+            margin: '0 auto',
+            background: '#ffffff',
+            border: '1px solid #dbeafe',
+            borderRadius: '18px',
+            boxShadow: '0 16px 40px rgba(15, 23, 42, .24)',
+            padding: '16px'
+          }}
+        >
+          <button
+            type="button"
+            onClick={closeInstallBanner}
+            aria-label="閉じる"
+            style={{
+              position: 'absolute',
+              top: '8px',
+              right: '10px',
+              border: 'none',
+              background: 'transparent',
+              color: '#64748b',
+              fontSize: '1.35rem',
+              cursor: 'pointer',
+              lineHeight: 1
+            }}
+          >
+            ×
+          </button>
+
+          <div style={{display:'flex',alignItems:'center',gap:'12px',paddingRight:'24px'}}>
+            <img
+              src="/work-time-manager/icons/icon-192.png"
+              alt=""
+              width={58}
+              height={58}
+              style={{borderRadius:'14px',flexShrink:0}}
+            />
+            <div>
+              <div style={{fontSize:'1rem',fontWeight:800,color:'#0f172a',marginBottom:'4px'}}>
+                ホーム画面に追加
+              </div>
+              <div style={{fontSize:'.8rem',lineHeight:1.55,color:'#475569'}}>
+                Work Time Managerをアプリのように、すぐ開けます。
+              </div>
+            </div>
+          </div>
+
+          <div style={{display:'flex',gap:'8px',marginTop:'14px'}}>
+            <button
+              type="button"
+              onClick={closeInstallBanner}
+              style={{
+                flex:1,
+                padding:'11px 12px',
+                borderRadius:'10px',
+                border:'1px solid #cbd5e1',
+                background:'#ffffff',
+                color:'#475569',
+                fontWeight:700,
+                cursor:'pointer'
+              }}
+            >
+              今はしない
+            </button>
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              style={{
+                flex:1.35,
+                padding:'11px 12px',
+                borderRadius:'10px',
+                border:'none',
+                background:'#1d4ed8',
+                color:'#ffffff',
+                fontWeight:800,
+                cursor:'pointer',
+                boxShadow:'0 6px 16px rgba(29, 78, 216, .25)'
+              }}
+            >
+              {isIosInstallGuide ? '追加方法を見る' : '追加する'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="wrap" ref={containerRef}>
         {/* SETTINGS */}

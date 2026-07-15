@@ -1,0 +1,21 @@
+{
+  "name": "Work Time Manager",
+  "short_name": "Work Time",
+  "description": "勤務時間・給与・交通費を管理するツール",
+  "start_url": "/work-time-manager/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    {
+      "src": "/work-time-manager/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/work-time-manager/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

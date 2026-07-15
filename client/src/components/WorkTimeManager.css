@@ -70,7 +70,8 @@ input#limitH:focus{border-color:var(--primary)}
 .cell-card.has-data{background:#f0f7ff;border-color:#93c5fd}
 .cell-card.partial{background:#fffbf0;border-color:#fbbf24}
 .cell-row{display:flex;align-items:center;gap:3px;width:100%}
-.cell-row label{font-size:.6rem;font-weight:700;color:var(--muted);white-space:nowrap;width:18px;flex-shrink:0}
+.cell-row label{font-size:.62rem;font-weight:800;color:#374151;white-space:nowrap;width:18px;flex-shrink:0;opacity:1;}
+
 /* text input for HH:MM — fixed width, large tap target */
 .cell-row input.time-inp{
   width:0;flex:1;border:1.5px solid var(--border);border-radius:6px;
@@ -84,7 +85,7 @@ input#limitH:focus{border-color:var(--primary)}
 .cell-row input.time-inp:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(26,111,196,.12)}
 .cell-row input.time-inp.invalid{border-color:#f87171;background:#fff5f5}
 /* break input uses .time-inp.brk-inp — no separate number rule needed */
-.cell-row .unit{font-size:.58rem;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.cell-row .unit{ font-size:.60rem;font-weight:700;color:#374151;white-space:nowrap;flex-shrink:0;opacity:1;}
 .cell-hours{
   text-align:center;font-size:.75rem;font-weight:800;
   color:var(--primary-d);margin-top:2px;

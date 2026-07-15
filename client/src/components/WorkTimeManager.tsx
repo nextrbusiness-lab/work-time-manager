@@ -743,7 +743,7 @@ function WorkTimeManagerInner() {
 
     // iPhone/iPad cannot open the native install dialog from a web button,
     // so show a short manual guide instead.
-    if (isIos) setShowInstallBanner(true);
+    setShowInstallBanner(true);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
